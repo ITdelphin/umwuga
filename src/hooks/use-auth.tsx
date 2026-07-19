@@ -43,9 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     getSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      router.refresh()
+      if (event === "SIGNED_IN") {
+        router.push("/dashboard")
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -53,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error) router.push("/dashboard")
     return { error: error?.message ?? null }
   }
 
@@ -63,7 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: { data: { full_name: fullName } },
     })
-    if (!error) router.push("/dashboard")
     return { error: error?.message ?? null }
   }
 
