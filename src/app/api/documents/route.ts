@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       .from("documents")
       .select("content, title")
       .eq("id", downloadId)
-      .single()
+      .maybeSingle()
 
     if (!data?.content) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 })

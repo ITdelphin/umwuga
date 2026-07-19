@@ -23,10 +23,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return
     setDisplayName(user?.user_metadata?.full_name || "")
-    supabase.from("credits").select("balance").eq("user_id", user.id).single().then(({ data }) => {
+    supabase.from("credits").select("balance").eq("user_id", user.id).maybeSingle().then(({ data }) => {
       if (data) setCredits(data.balance)
     })
-  }, [user, supabase])
+  }, [user])
 
   async function handleSave() {
     setSaving(true)

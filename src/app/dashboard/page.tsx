@@ -38,7 +38,7 @@ export default function DashboardPage() {
     if (!user) return
     supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id).then(({ count }) => setDocCount(count || 0))
     supabase.from("job_applications").select("id", { count: "exact", head: true }).eq("user_id", user.id).then(({ count }) => setAppCount(count || 0))
-  }, [user, supabase])
+  }, [user])
 
   const profileComplete = profile
     ? [profile.full_name, profile.professional_title, profile.bio, profile.location].filter(Boolean).length

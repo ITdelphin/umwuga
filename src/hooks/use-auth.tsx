@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      if (event === "SIGNED_IN") {
+      if (event === "SIGNED_IN" && !window.location.pathname.startsWith("/reset-password")) {
         router.push("/dashboard")
       }
     })
@@ -59,11 +59,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     })
+    if (!error && data.user) {
+      const { data: existing } = await supabase
+        .from("profiles").select("id").eq("user_id", data.user.id).maybeSingle()
+      if (!existing) {
+        await supabase.from("profiles").insert({
+          user_id: data.user.id,
+          full_name: fullName,
+          email,
+          role: "user",
+        })
+      }
+    }
     return { error: error?.message ?? null }
   }
 

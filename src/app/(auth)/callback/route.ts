@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     .from("profiles")
     .select("id")
     .eq("user_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (!existingProfile) {
     const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User"
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       .from("credits")
       .select("id")
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
     if (!credits) {
       await supabase.from("credits").insert({ user_id: user.id, balance: 1 })
     }

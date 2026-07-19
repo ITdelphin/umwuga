@@ -16,7 +16,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     .from("portfolios")
     .select("profile_id, published, theme")
     .eq("slug", slug)
-    .single()
+    .maybeSingle()
 
   if (!portfolio || !portfolio.published) notFound()
 
@@ -24,7 +24,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     .from("profiles")
     .select("*")
     .eq("id", portfolio.profile_id)
-    .single()
+    .maybeSingle()
 
   if (!profile) notFound()
 

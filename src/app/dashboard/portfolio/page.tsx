@@ -22,9 +22,9 @@ export default function PortfolioPage() {
   useEffect(() => {
     if (!user) return
     const loadPortfolio = async () => {
-      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single()
+      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle()
       if (profile) {
-        const { data: portfolio } = await supabase.from("portfolios").select("*").eq("profile_id", profile.id).single()
+        const { data: portfolio } = await supabase.from("portfolios").select("*").eq("profile_id", profile.id).maybeSingle()
         if (portfolio) {
           setSlug(portfolio.slug)
           setPublished(portfolio.published)
@@ -33,14 +33,14 @@ export default function PortfolioPage() {
       setLoading(false)
     }
     loadPortfolio()
-  }, [user, supabase])
+  }, [user])
 
   async function togglePublish() {
     setSaving(true)
     const newPublished = !published
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).single()
+    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).maybeSingle()
     if (profile) {
-      const { data: existing } = await supabase.from("portfolios").select("id").eq("profile_id", profile.id).single()
+      const { data: existing } = await supabase.from("portfolios").select("id").eq("profile_id", profile.id).maybeSingle()
       if (existing) {
         await supabase.from("portfolios").update({ published: newPublished, slug }).eq("id", existing.id)
       } else {
@@ -53,9 +53,9 @@ export default function PortfolioPage() {
 
   async function handleSaveSlug() {
     setSaving(true)
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).single()
+    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user?.id).maybeSingle()
     if (profile) {
-      const { data: existing } = await supabase.from("portfolios").select("id").eq("profile_id", profile.id).single()
+      const { data: existing } = await supabase.from("portfolios").select("id").eq("profile_id", profile.id).maybeSingle()
       if (existing) {
         await supabase.from("portfolios").update({ slug }).eq("id", existing.id)
       } else {
