@@ -9,19 +9,34 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const supabase = createClient()
   const [credits, setCredits] = useState(0)
+  const [displayName, setDisplayName] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!user) return
+    setDisplayName(user?.user_metadata?.full_name || "")
     supabase.from("credits").select("balance").eq("user_id", user.id).single().then(({ data }) => {
       if (data) setCredits(data.balance)
     })
   }, [user, supabase])
+
+  async function handleSave() {
+    setSaving(true)
+    setSaved(false)
+    await supabase.auth.updateUser({ data: { full_name: displayName } })
+    await supabase.from("profiles").update({ full_name: displayName }).eq("user_id", user?.id)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
 
   return (
     <div className="space-y-6">
@@ -35,17 +50,19 @@ export default function SettingsPage() {
           <CardTitle>Account</CardTitle>
           <CardDescription>Update your account information</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+          <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Display Name</Label>
-            <Input id="name" defaultValue={user?.user_metadata?.full_name || ""} />
+            <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
           </div>
           <Separator />
-          <Button>Save Changes</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : saved ? "Saved!" : "Save Changes"}
+          </Button>
         </CardContent>
       </Card>
 

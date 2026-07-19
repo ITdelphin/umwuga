@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select } from "@/components/ui/select"
-import { Plus, X, Loader2 } from "lucide-react"
+import { Plus, X, Loader2, Briefcase, GraduationCap } from "lucide-react"
 
 export default function ProfilePage() {
-  const { profile, skills, experience, education, loading, updateProfile, addSkill, removeSkill } = useProfile()
+  const { profile, skills, experience, education, loading, updateProfile, addExperience, addEducation, addSkill, removeSkill } = useProfile()
   const [fullName, setFullName] = useState("")
   const [title, setTitle] = useState("")
   const [bio, setBio] = useState("")
@@ -21,6 +21,17 @@ export default function ProfilePage() {
   const [newSkill, setNewSkill] = useState("")
   const [newSkillCategory, setNewSkillCategory] = useState<"technical" | "soft" | "language" | "tool">("technical")
   const [saving, setSaving] = useState(false)
+  const [showExpForm, setShowExpForm] = useState(false)
+  const [expCompany, setExpCompany] = useState("")
+  const [expPosition, setExpPosition] = useState("")
+  const [expStart, setExpStart] = useState("")
+  const [expEnd, setExpEnd] = useState("")
+  const [expCurrent, setExpCurrent] = useState(false)
+  const [showEduForm, setShowEduForm] = useState(false)
+  const [eduSchool, setEduSchool] = useState("")
+  const [eduDegree, setEduDegree] = useState("")
+  const [eduField, setEduField] = useState("")
+  const [eduEnd, setEduEnd] = useState("")
 
   useEffect(() => {
     if (profile) {
@@ -169,16 +180,54 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             {experience.map((exp) => (
               <div key={exp.id} className="rounded-lg border p-3">
-                <p className="font-medium">{exp.position}</p>
-                <p className="text-sm text-muted-foreground">{exp.company}</p>
+                <div className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium">{exp.position}</p>
+                </div>
+                <p className="text-sm text-muted-foreground ml-6">{exp.company}</p>
               </div>
             ))}
-            {experience.length === 0 && (
+            {experience.length === 0 && !showExpForm && (
               <p className="text-sm text-muted-foreground">No experience added</p>
             )}
-            <Button variant="outline" className="w-full">
-              <Plus className="mr-2 h-4 w-4" /> Add Experience
-            </Button>
+            {showExpForm ? (
+              <div className="space-y-3 rounded-lg border p-3">
+                <Input placeholder="Company" value={expCompany} onChange={(e) => setExpCompany(e.target.value)} />
+                <Input placeholder="Position" value={expPosition} onChange={(e) => setExpPosition(e.target.value)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Start date</Label>
+                    <Input type="date" value={expStart} onChange={(e) => setExpStart(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">End date</Label>
+                    <Input type="date" value={expEnd} onChange={(e) => setExpEnd(e.target.value)} disabled={expCurrent} />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={expCurrent} onChange={(e) => setExpCurrent(e.target.checked)} className="accent-primary" />
+                  I currently work here
+                </label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowExpForm(false)}>Cancel</Button>
+                  <Button size="sm" onClick={async () => {
+                    if (expCompany && expPosition) {
+                      await addExperience({
+                        company: expCompany, position: expPosition,
+                        start_date: expStart, end_date: expEnd || undefined,
+                        current: expCurrent, achievements: [], description: "",
+                      })
+                      setExpCompany(""); setExpPosition(""); setExpStart(""); setExpEnd(""); setExpCurrent(false)
+                      setShowExpForm(false)
+                    }
+                  }}>Save</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="outline" className="w-full" onClick={() => setShowExpForm(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Experience
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -190,16 +239,45 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             {education.map((edu) => (
               <div key={edu.id} className="rounded-lg border p-3">
-                <p className="font-medium">{edu.degree}</p>
-                <p className="text-sm text-muted-foreground">{edu.school}</p>
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium">{edu.degree}</p>
+                </div>
+                <p className="text-sm text-muted-foreground ml-6">{edu.school}</p>
               </div>
             ))}
-            {education.length === 0 && (
+            {education.length === 0 && !showEduForm && (
               <p className="text-sm text-muted-foreground">No education added</p>
             )}
-            <Button variant="outline" className="w-full">
-              <Plus className="mr-2 h-4 w-4" /> Add Education
-            </Button>
+            {showEduForm ? (
+              <div className="space-y-3 rounded-lg border p-3">
+                <Input placeholder="School / University" value={eduSchool} onChange={(e) => setEduSchool(e.target.value)} />
+                <Input placeholder="Degree (e.g., BSc)" value={eduDegree} onChange={(e) => setEduDegree(e.target.value)} />
+                <Input placeholder="Field of study" value={eduField} onChange={(e) => setEduField(e.target.value)} />
+                <div>
+                  <Label className="text-xs">Graduation year</Label>
+                  <Input type="date" value={eduEnd} onChange={(e) => setEduEnd(e.target.value)} />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowEduForm(false)}>Cancel</Button>
+                  <Button size="sm" onClick={async () => {
+                    if (eduSchool && eduDegree) {
+                      await addEducation({
+                        school: eduSchool, degree: eduDegree,
+                        field: eduField, end_date: eduEnd || undefined,
+                        start_date: undefined, gpa: undefined,
+                      })
+                      setEduSchool(""); setEduDegree(""); setEduField(""); setEduEnd("")
+                      setShowEduForm(false)
+                    }
+                  }}>Save</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="outline" className="w-full" onClick={() => setShowEduForm(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Education
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
