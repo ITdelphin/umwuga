@@ -17,7 +17,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
     }
 
-    const detectedLang = await languageAgent.detect(message)
+    let detectedLang = "en"
+    try {
+      detectedLang = await languageAgent.detect(message)
+    } catch {
+      // Language detection unavailable, default to English
+    }
     const intent = detectIntent(message, context)
 
     let response: string
@@ -52,7 +57,11 @@ export async function POST(request: Request) {
         break
 
       default:
-        response = await conversationAgent.process(message, { ...context, language: detectedLang })
+        try {
+          response = await conversationAgent.process(message, { ...context, language: detectedLang })
+        } catch {
+          response = "I'm here to help with your career! You can ask me to create CVs, cover letters, prepare for interviews, or give career advice. What would you like help with?"
+        }
     }
 
     if (detectedLang !== "en") {
