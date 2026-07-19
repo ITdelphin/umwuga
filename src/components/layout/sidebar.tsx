@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 import {
   LayoutDashboard,
   User,
@@ -15,6 +16,7 @@ import {
   Lightbulb,
   BookOpen,
   Bell,
+  LogOut,
 } from "lucide-react"
 
 const navItems = [
@@ -32,6 +34,7 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { signOut } = useAuth()
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card">
@@ -66,7 +69,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-2">
         <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
           <Wallet className="h-4 w-4 text-accent" />
           <div className="flex-1">
@@ -74,6 +77,13 @@ export function Sidebar() {
             <p className="text-sm font-medium">5 documents</p>
           </div>
         </div>
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
       </div>
     </aside>
   )

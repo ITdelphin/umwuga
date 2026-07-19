@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +16,7 @@ import {
   Bell,
   History,
   Settings,
+  LogOut,
 } from "lucide-react"
 
 const navItems = [
@@ -31,6 +33,7 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const { signOut } = useAuth()
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card">
@@ -68,7 +71,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t mt-auto">
+      <div className="p-4 border-t mt-auto space-y-1">
         <Link
           href="/dashboard"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -76,6 +79,13 @@ export function AdminSidebar() {
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Link>
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
       </div>
     </aside>
   )
