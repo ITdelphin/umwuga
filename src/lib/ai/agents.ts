@@ -12,7 +12,8 @@ interface AgentContext {
 
 export class ConversationAgent {
   async process(message: string, context: AgentContext) {
-    const systemPrompt = `You are Umwuga AI, a professional AI career assistant. You help users:
+    try {
+      const systemPrompt = `You are Umwuga AI, a professional AI career assistant. You help users:
 - Create CVs, resumes, cover letters, and other career documents
 - Prepare for job interviews
 - Analyze job descriptions
@@ -29,20 +30,33 @@ Rules:
 
 Available actions: create_cv, create_cover_letter, create_application_letter, create_motivation_letter, prepare_interview, improve_cv, analyze_job, build_profile`
 
-    const messages = [
-      { role: "system" as const, content: systemPrompt },
-      ...(context.conversationHistory || []),
-      { role: "user" as const, content: message },
-    ]
+      const messages = [
+        { role: "system" as const, content: systemPrompt },
+        ...(context.conversationHistory || []),
+        { role: "user" as const, content: message },
+      ]
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages,
-      temperature: 0.7,
-      max_tokens: 500,
-    })
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages,
+        temperature: 0.7,
+        max_tokens: 500,
+      })
 
-    return response.choices[0]?.message?.content || "I'm sorry, I didn't understand that. Could you please rephrase?"
+      return response.choices[0]?.message?.content || "I'm sorry, I didn't understand that. Could you please rephrase?"
+    } catch {
+      const lower = message.toLowerCase()
+      if (lower.includes("cv") || lower.includes("resume") || lower.includes("cover letter")) {
+        return "I can help you create professional documents! To get started, please go to the Documents page and click 'New Document', or tell me more about your background and what type of document you need."
+      }
+      if (lower.includes("interview") || lower.includes("mock") || lower.includes("practice")) {
+        return "I can help you prepare for interviews! Go to the Interviews page to start a mock interview, or tell me the job title and company you're preparing for."
+      }
+      if (lower.includes("job") || lower.includes("application") || lower.includes("apply")) {
+        return "I can help you track your job applications! Go to the Applications page to add and manage your applications."
+      }
+      return "I'm here to help with your career! You can ask me to create CVs, cover letters, practice interviews, or give career advice. What would you like help with?"
+    }
   }
 }
 
@@ -58,26 +72,176 @@ export class DocumentAgent {
 
     const prompt = prompts[type] || prompts.cv
 
-    const systemPrompt = `You are an expert career document writer. ${prompt}
+    try {
+      const profileText = JSON.stringify(profile, null, 2)
+      const jdText = jobDescription ? `\nJob Description:\n${jobDescription}` : ""
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: `You are an expert career document writer. ${prompt}
 Format the document professionally using markdown.
 Include sections: Contact, Summary, Experience, Education, Skills.
 Use strong action verbs and quantify achievements where possible.
-Ensure the document is ATS-friendly.`
+Ensure the document is ATS-friendly.` },
+          { role: "user", content: `Profile:\n${profileText}${jdText}\n\nGenerate the document.` },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      })
 
-    const profileText = JSON.stringify(profile, null, 2)
-    const jdText = jobDescription ? `\nJob Description:\n${jobDescription}` : ""
+      return response.choices[0]?.message?.content || ""
+    } catch {
+      return this.generateFallback(type, profile, jobDescription)
+    }
+  }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Profile:\n${profileText}${jdText}\n\nGenerate the document.` },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    })
+  private generateFallback(type: string, profile: Record<string, unknown>, jobDescription?: string): string {
+    const name = (profile?.full_name as string) || "[Your Name]"
+    const title = (profile?.professional_title as string) || "[Your Professional Title]"
+    const email = (profile?.email as string) || "[your.email@example.com]"
+    const phone = (profile?.phone as string) || "[+250 000 000 000]"
+    const location = (profile?.location as string) || "[Your Location]"
+    const bio = (profile?.bio as string) || ""
+    const skills = (profile?.skills as string[]) || []
 
-    return response.choices[0]?.message?.content || ""
+    const contactSection = `# ${name}
+**${title}**
+${email} | ${phone} | ${location}`
+
+    const skillsSection = skills.length > 0
+      ? `## Skills\n${skills.map(s => `- ${s}`).join("\n")}`
+      : "## Skills\n- [Skill 1]\n- [Skill 2]\n- [Skill 3]"
+
+    const templates: Record<string, string> = {
+      cv: `${contactSection}
+
+## Professional Summary
+${bio || `Dedicated and results-oriented ${title || "professional"} with proven expertise in delivering high-quality results. Committed to continuous learning and professional growth.`}
+
+## Experience
+### [Job Title] | [Company Name] | [Start Date] - [End Date]
+- [Key achievement or responsibility]
+- [Key achievement or responsibility]
+- [Key achievement or responsibility]
+
+### [Previous Job Title] | [Previous Company] | [Start Date] - [End Date]
+- [Key achievement or responsibility]
+- [Key achievement or responsibility]
+
+## Education
+### [Degree] in [Field of Study]
+[School Name] | [Graduation Year]
+- [Relevant coursework or achievement]
+- [Academic highlight]
+
+${skillsSection}
+
+## Certifications
+- [Certification Name] - [Issuing Organization]
+
+---
+*This CV was generated by Umwuga AI. Review and customize it to match your experience.*`,
+
+      resume: `${contactSection}
+
+## Summary
+${bio || `${title || "Professional"} with a strong track record of delivering results. Skilled in [key area] with expertise in [key area].`}
+
+## Experience
+### [Job Title] | [Company Name]
+[Start Date] - [End Date]
+- [Key accomplishment with measurable result]
+- [Key accomplishment with measurable result]
+
+## Education
+### [Degree], [Field of Study]
+[School Name], [Year]
+
+${skillsSection}
+
+---
+*This resume was generated by Umwuga AI. Tailor it to your target role.*`,
+
+      cover_letter: `${contactSection}
+
+**Date:** ${new Date().toLocaleDateString()}
+
+**Hiring Manager**
+[Company Name]
+[Company Address]
+
+**Re: Application for [Job Title] Position**
+
+Dear Hiring Manager,
+
+I am writing to express my strong interest in the [Job Title] position at [Company Name]. With my background in ${title || "relevant field"} and proven track record of delivering results, I am confident that I would be a valuable addition to your team.
+
+${bio ? `As ${bio.toLowerCase().startsWith("i") ? bio.toLowerCase() : `a professional, ${bio.toLowerCase()}`}` : `Throughout my career, I have developed strong skills in ${skills.slice(0, 3).join(", ") || "relevant areas"} and consistently delivered high-quality work.`}
+
+${jobDescription ? `After reviewing the job description, I am particularly excited about the opportunity to contribute to [specific aspect of the role]. My experience in [relevant area] aligns well with your requirements.` : `I am eager to bring my expertise to [Company Name] and contribute to your continued success.`}
+
+I would welcome the opportunity to discuss how my skills and experience align with the needs of your team. Thank you for considering my application.
+
+Sincerely,
+${name}
+${email} | ${phone}
+
+---
+*This cover letter was generated by Umwuga AI. Personalize it for the specific role and company.*`,
+
+      application_letter: `${contactSection}
+
+**Date:** ${new Date().toLocaleDateString()}
+
+**Hiring Committee**
+[Company/Organization Name]
+[Address]
+
+**Re: Application for [Position]**
+
+Dear Hiring Committee,
+
+I am writing to formally apply for the [Position] at [Organization]. As a ${title || "qualified professional"} with experience in ${skills.slice(0, 2).join(" and ") || "relevant fields"}, I believe I am an excellent candidate for this opportunity.
+
+${bio || `My professional journey has equipped me with the skills necessary to excel in this role. I am particularly adept at [key strength] and have a proven ability to [key capability].`}
+
+I have attached my CV for your review and look forward to the possibility of discussing my application further.
+
+Sincerely,
+${name}
+${email} | ${phone}
+
+---
+*This application letter was generated by Umwuga AI. Customize it for the specific position.*`,
+
+      motivation_letter: `${contactSection}
+
+**Date:** ${new Date().toLocaleDateString()}
+
+**Selection Committee**
+
+**Re: Motivation Letter for [Program/Scholarship]**
+
+Dear Selection Committee,
+
+I am writing to express my genuine motivation for applying to [Program Name]. This opportunity represents a significant step in my professional journey, and I am excited about the possibility of contributing to and learning from this experience.
+
+${bio || `My background in ${title || "my field"} has prepared me well for this opportunity. I am passionate about [area of interest] and committed to making a meaningful impact.`}
+
+${skills.length > 0 ? `My key strengths include ${skills.join(", ")}, which I believe make me a strong candidate for this program.` : ""}
+
+I am confident that this opportunity will allow me to grow both personally and professionally, and I am committed to giving my best effort.
+
+Sincerely,
+${name}
+${email} | ${phone}
+
+---
+*This motivation letter was generated by Umwuga AI. Tailor it to the specific program or scholarship.*`,
+    }
+
+    return templates[type] || templates.cv
   }
 
   async improve(content: string, instructions: string) {

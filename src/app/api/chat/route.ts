@@ -110,16 +110,10 @@ function detectIntent(message: string, context?: any): string {
 
 async function handleDocumentGeneration(type: string, message: string, context: any) {
   const docType = type.replace("create_", "")
-
-  if (!context?.profile) {
-    return `I'd be happy to create a ${docType.replace("_", " ")} for you! First, I need some information. Could you tell me:
-1. Your full name and current position
-2. The job title/position you're targeting
-${docType === "cover_letter" ? "3. The company name and job description" : ""}`
-  }
+  const profile = context?.profile && Object.keys(context.profile).length > 0 ? context.profile : {}
 
   try {
-    const document = await documentAgent.generate(docType, context.profile, context.jobDescription)
+    const document = await documentAgent.generate(docType, profile, context?.jobDescription)
     return `Here's your ${docType.replace("_", " ")}:\n\n${document}\n\nWould you like me to make any changes?`
   } catch {
     return "I'm sorry, I had trouble generating the document. Could you provide more details about what you need?"
