@@ -17,6 +17,7 @@ import {
   BookOpen,
   Bell,
   LogOut,
+  Shield,
 } from "lucide-react"
 
 const navItems = [
@@ -34,7 +35,8 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
+  const isAdmin = user?.user_metadata?.role === "admin" || user?.user_metadata?.role === "super_admin"
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card">
@@ -67,6 +69,15 @@ export function Sidebar() {
             </Link>
           )
         })}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors mt-4 border-t pt-4"
+          >
+            <Shield className="h-4 w-4" />
+            Admin Panel
+          </Link>
+        )}
       </nav>
 
       <div className="p-4 border-t space-y-2">
