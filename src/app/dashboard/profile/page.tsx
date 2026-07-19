@@ -214,7 +214,7 @@ export default function ProfilePage() {
                     if (expCompany && expPosition) {
                       await addExperience({
                         company: expCompany, position: expPosition,
-                        start_date: expStart, end_date: expEnd || undefined,
+                        start_date: expStart, end_date: expEnd || null,
                         current: expCurrent, achievements: [], description: "",
                       })
                       setExpCompany(""); setExpPosition(""); setExpStart(""); setExpEnd(""); setExpCurrent(false)
@@ -264,8 +264,8 @@ export default function ProfilePage() {
                     if (eduSchool && eduDegree) {
                       await addEducation({
                         school: eduSchool, degree: eduDegree,
-                        field: eduField, end_date: eduEnd || undefined,
-                        start_date: undefined, gpa: undefined,
+                        field: eduField || null, end_date: eduEnd || null,
+                        start_date: "", gpa: null,
                       })
                       setEduSchool(""); setEduDegree(""); setEduField(""); setEduEnd("")
                       setShowEduForm(false)
