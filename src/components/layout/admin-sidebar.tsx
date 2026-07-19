@@ -12,6 +12,9 @@ import {
   CreditCard,
   ArrowLeft,
   Shield,
+  Bell,
+  History,
+  Settings,
 } from "lucide-react"
 
 const navItems = [
@@ -21,6 +24,9 @@ const navItems = [
   { href: "/admin/applications", label: "Applications", icon: Briefcase },
   { href: "/admin/interviews", label: "Interviews", icon: MessageSquare },
   { href: "/admin/credits", label: "Credits & Payments", icon: CreditCard },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/audit-logs", label: "Audit Logs", icon: History },
+  { href: "/admin/settings", label: "System Settings", icon: Settings },
 ]
 
 export function AdminSidebar() {

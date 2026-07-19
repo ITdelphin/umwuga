@@ -238,3 +238,67 @@ CREATE POLICY "Users can view own portfolio" ON portfolios FOR SELECT USING (aut
 CREATE POLICY "Users can manage own portfolio" ON portfolios FOR ALL USING (auth.uid() IN (SELECT user_id FROM profiles WHERE id = profile_id));
 
 CREATE POLICY "Public profiles viewable" ON portfolios FOR SELECT USING (published = true);
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'info' CHECK (type IN ('info', 'warning', 'success', 'error', 'promotion')),
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage notifications" ON notifications FOR ALL USING (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+
+-- Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  target_type TEXT,
+  target_id TEXT,
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can view audit logs" ON audit_logs FOR SELECT USING (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+CREATE POLICY "Admins can insert audit logs" ON audit_logs FOR INSERT WITH CHECK (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+
+-- System Settings
+CREATE TABLE IF NOT EXISTS system_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  key TEXT UNIQUE NOT NULL,
+  value JSONB NOT NULL DEFAULT '{}',
+  description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+);
+
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can manage settings" ON system_settings FOR ALL USING (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+CREATE POLICY "Anyone can read settings" ON system_settings FOR SELECT USING (true);
+
+-- Insert default settings
+INSERT INTO system_settings (key, value, description) VALUES
+  ('site_name', '"Umwuga AI"', 'Platform display name'),
+  ('maintenance_mode', 'false', 'Put site in maintenance mode'),
+  ('allow_registration', 'true', 'Allow new user registrations'),
+  ('default_credits', '5', 'Default credits for new users'),
+  ('max_document_size_mb', '10', 'Maximum document upload size'),
+  ('ai_enabled', 'true', 'Enable AI-powered features'),
+  ('contact_email', '"admin@umwuga.com"', 'Platform contact email')
+ON CONFLICT (key) DO NOTHING;

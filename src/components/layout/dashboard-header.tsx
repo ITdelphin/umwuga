@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import { LogOut, Menu } from "lucide-react"
 
 interface DashboardHeaderProps {
@@ -22,6 +23,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>

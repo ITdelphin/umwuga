@@ -14,6 +14,7 @@ import {
   Wallet,
   Lightbulb,
   BookOpen,
+  Bell,
 } from "lucide-react"
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/dashboard/portfolio", label: "Portfolio", icon: GraduationCap },
   { href: "/dashboard/career-advisor", label: "Career Advisor", icon: Lightbulb },
   { href: "/dashboard/student", label: "Student Mode", icon: BookOpen },
+  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 
