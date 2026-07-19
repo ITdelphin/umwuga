@@ -11,6 +11,7 @@ CREATE TABLE profiles (
   professional_title TEXT,
   avatar_url TEXT,
   bio TEXT,
+  role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
