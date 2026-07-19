@@ -1,15 +1,17 @@
 "use client"
 
+import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { LogOut, Menu } from "lucide-react"
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void
-  user?: { name?: string; email?: string; avatar?: string }
 }
 
-export function DashboardHeader({ onMenuClick, user }: DashboardHeaderProps) {
+export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+  const { user, signOut } = useAuth()
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
@@ -20,18 +22,22 @@ export function DashboardHeader({ onMenuClick, user }: DashboardHeaderProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
 
           <div className="flex items-center gap-3">
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium">{user?.name || "User"}</p>
-              <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
+              <p className="text-sm font-medium">
+                {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
             <Avatar>
-              <AvatarImage src={user?.avatar} />
-              <AvatarFallback>{(user?.name || "U")[0]}</AvatarFallback>
+              <AvatarImage src={user?.user_metadata?.avatar_url} />
+              <AvatarFallback>
+                {(user?.user_metadata?.full_name || user?.email || "U")[0].toUpperCase()}
+              </AvatarFallback>
             </Avatar>
           </div>
         </div>
