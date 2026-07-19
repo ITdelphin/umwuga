@@ -36,14 +36,16 @@ export function VoiceRecorder({ onTranscription, disabled }: VoiceRecorderProps)
         setAudioUrl(url)
         setIsProcessing(true)
 
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          const base64 = reader.result as string
-          setIsProcessing(false)
-          // TODO: Send to speech-to-text API
-          onTranscription("Sample transcribed text from voice recording.")
+        try {
+          const formData = new FormData()
+          formData.append("audio", blob, "recording.webm")
+          const res = await fetch("/api/speech", { method: "POST", body: formData })
+          const data = await res.json()
+          onTranscription(data.text || "Could not transcribe audio.")
+        } catch {
+          onTranscription("Could not transcribe audio. Please check your connection.")
         }
-        reader.readAsDataURL(blob)
+        setIsProcessing(false)
 
         stream.getTracks().forEach(track => track.stop())
       }

@@ -57,16 +57,31 @@ export function ChatInterface({ onAction }: ChatInterfaceProps) {
     setInput("")
     setLoading(true)
 
-    // TODO: Send to AI agent API
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          context: { profile: {}, conversation: messages },
+        }),
+      })
+      const data = await res.json()
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "I understand you want to create a CV. Let me help you with that. Could you tell me your current job title or the position you're applying for?",
+        content: data.response || "I'm sorry, I had trouble processing your request.",
       }
       setMessages((prev) => [...prev, aiMessage])
-      setLoading(false)
-    }, 1000)
+    } catch {
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "I'm sorry, I'm having trouble connecting. Please check your internet connection and try again.",
+      }
+      setMessages((prev) => [...prev, aiMessage])
+    }
+    setLoading(false)
   }
 
   function handleOptionClick(option: string) {

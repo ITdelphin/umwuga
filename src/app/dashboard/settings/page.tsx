@@ -1,14 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import Link from "next/link"
 
 export default function SettingsPage() {
+  const { user } = useAuth()
+  const supabase = createClient()
+  const [credits, setCredits] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from("credits").select("balance").eq("user_id", user.id).single().then(({ data }) => {
+      if (data) setCredits(data.balance)
+    })
+  }, [user, supabase])
+
   return (
     <div className="space-y-6">
       <div>
@@ -24,11 +38,11 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Display Name</Label>
-            <Input id="name" defaultValue="John Doe" />
+            <Input id="name" defaultValue={user?.user_metadata?.full_name || ""} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="john@example.com" />
+            <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
           </div>
           <Separator />
           <Button>Save Changes</Button>
@@ -71,9 +85,11 @@ export default function SettingsPage() {
           <div className="rounded-lg bg-muted p-4 flex items-center justify-between">
             <div>
               <p className="font-medium">Free Plan</p>
-              <p className="text-sm text-muted-foreground">5 document credits remaining</p>
+              <p className="text-sm text-muted-foreground">{credits} document credits remaining</p>
             </div>
-            <Button>Upgrade</Button>
+            <Button asChild>
+              <Link href="/pricing">Upgrade</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

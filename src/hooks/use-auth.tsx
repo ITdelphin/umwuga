@@ -13,6 +13,8 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>
   signInWithGitHub: () => Promise<void>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
+  updatePassword: (password: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthState>({
@@ -23,6 +25,8 @@ const AuthContext = createContext<AuthState>({
   signInWithGoogle: async () => {},
   signInWithGitHub: async () => {},
   signOut: async () => {},
+  resetPassword: async () => ({ error: null }),
+  updatePassword: async () => ({ error: null }),
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -64,17 +68,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
+    const redirectTo = typeof window !== "undefined"
+      ? `${window.location.origin}/callback`
+      : `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/callback`
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/callback` },
+      options: { redirectTo },
     })
+    if (error) console.error("Google OAuth error:", error.message)
   }
 
   const signInWithGitHub = async () => {
-    await supabase.auth.signInWithOAuth({
+    const redirectTo = typeof window !== "undefined"
+      ? `${window.location.origin}/callback`
+      : `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/callback`
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: `${window.location.origin}/callback` },
+      options: { redirectTo },
     })
+    if (error) console.error("GitHub OAuth error:", error.message)
   }
 
   const signOut = async () => {
@@ -82,8 +94,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/")
   }
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    return { error: error?.message ?? null }
+  }
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    return { error: error?.message ?? null }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithGitHub, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, signInWithGitHub, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

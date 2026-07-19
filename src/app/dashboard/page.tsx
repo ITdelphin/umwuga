@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useProfile } from "@/hooks/use-profile"
+import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -28,6 +30,15 @@ const quickActions = [
 export default function DashboardPage() {
   const { user } = useAuth()
   const { profile, skills, loading } = useProfile()
+  const supabase = createClient()
+  const [docCount, setDocCount] = useState(0)
+  const [appCount, setAppCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id).then(({ count }) => setDocCount(count || 0))
+    supabase.from("job_applications").select("id", { count: "exact", head: true }).eq("user_id", user.id).then(({ count }) => setAppCount(count || 0))
+  }, [user, supabase])
 
   const profileComplete = profile
     ? [profile.full_name, profile.professional_title, profile.bio, profile.location].filter(Boolean).length
@@ -77,8 +88,8 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Create your first document</p>
+            <div className="text-2xl font-bold">{docCount}</div>
+            <p className="text-xs text-muted-foreground">{docCount === 0 ? "Create your first document" : "Total documents"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -87,8 +98,8 @@ export default function DashboardPage() {
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No applications tracked</p>
+            <div className="text-2xl font-bold">{appCount}</div>
+            <p className="text-xs text-muted-foreground">{appCount === 0 ? "No applications tracked" : "Total applications"}</p>
           </CardContent>
         </Card>
       </div>

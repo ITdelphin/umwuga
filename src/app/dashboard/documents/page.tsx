@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useProfile } from "@/hooks/use-profile"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +24,24 @@ export default function DocumentsPage() {
   const [documentTitle, setDocumentTitle] = useState("")
   const [documentType, setDocumentType] = useState("")
   const [recentDocuments, setRecentDocuments] = useState<any[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleUpload(file: File) {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const data = await res.json()
+      if (data.data) {
+        alert("Profile information extracted from your document! Check your profile to review.")
+      }
+    } catch {
+      alert("Failed to upload file. Please try again.")
+    }
+    setUploading(false)
+  }
 
   async function handleGenerateDocument(type: string) {
     setGenerating(true)
@@ -75,8 +93,18 @@ export default function DocumentsPage() {
         </div>
         {activeTab === "list" && (
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Upload className="mr-2 h-4 w-4" /> Upload CV
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf,.docx,.png,.jpg,.jpeg"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleUpload(file)
+              }}
+            />
+            <Button variant="outline" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> {uploading ? "Uploading..." : "Upload CV"}
             </Button>
             <Button onClick={() => setActiveTab("create")}>
               <Plus className="mr-2 h-4 w-4" /> New Document
