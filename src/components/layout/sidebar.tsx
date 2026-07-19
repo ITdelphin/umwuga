@@ -1,10 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
-import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -15,7 +12,6 @@ import {
   GraduationCap,
   Settings,
   Wallet,
-  Shield,
 } from "lucide-react"
 
 const navItems = [
@@ -29,24 +25,7 @@ const navItems = [
 ]
 
 export function Sidebar() {
-  const { user } = useAuth()
   const pathname = usePathname()
-  const supabase = createClient()
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  useEffect(() => {
-    if (!user) return
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data && (data.role === "admin" || data.role === "super_admin")) {
-          setIsAdmin(true)
-        }
-      })
-  }, [user])
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card">
@@ -79,20 +58,6 @@ export function Sidebar() {
             </Link>
           )
         })}
-        {isAdmin && (
-          <Link
-            href="/dashboard/admin"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-              pathname.startsWith("/dashboard/admin")
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <Shield className="h-4 w-4" />
-            Admin
-          </Link>
-        )}
       </nav>
 
       <div className="p-4 border-t">
