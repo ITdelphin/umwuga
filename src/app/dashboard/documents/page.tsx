@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ChatInterface } from "@/components/chat/chat-interface"
 import { DocumentPreview } from "@/components/documents/document-preview"
-import { FileText, Download, Eye, Plus, Loader2, Upload } from "lucide-react"
+import { FileText, Download, Eye, Plus, Loader2, Upload, History, RotateCcw, Clock } from "lucide-react"
+import type { DocumentVersion } from "@/types"
 
 const documentTypes = [
   { id: "cv", label: "CV / Resume", description: "ATS-friendly professional CV", icon: FileText },
@@ -25,7 +26,39 @@ export default function DocumentsPage() {
   const [documentType, setDocumentType] = useState("")
   const [recentDocuments, setRecentDocuments] = useState<any[]>([])
   const [uploading, setUploading] = useState(false)
+  const [versions, setVersions] = useState<DocumentVersion[]>([])
+  const [showVersions, setShowVersions] = useState(false)
+  const [versionDocId, setVersionDocId] = useState<string | null>(null)
+  const [restoring, setRestoring] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function saveVersion(documentId: string, content: string, title: string) {
+    await fetch("/api/documents/versions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId, content, title }),
+    })
+  }
+
+  async function loadVersions(documentId: string) {
+    const res = await fetch(`/api/documents/versions?documentId=${documentId}`)
+    const data = await res.json()
+    setVersions(data.versions || [])
+    setVersionDocId(documentId)
+    setShowVersions(true)
+  }
+
+  async function restoreVersion(versionId: string) {
+    if (!versionDocId) return
+    setRestoring(true)
+    await fetch("/api/documents/versions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId: versionDocId, versionId }),
+    })
+    setShowVersions(false)
+    setRestoring(false)
+  }
 
   async function handleUpload(file: File) {
     setUploading(true)
@@ -60,6 +93,9 @@ export default function DocumentsPage() {
       const data = await res.json()
       setDocumentContent(data.content || "Failed to generate document.")
       setDocumentTitle(`My ${type.replace("_", " ")}`)
+      if (data.id) {
+        await saveVersion(data.id, data.content, `My ${type.replace("_", " ")}`)
+      }
       setActiveTab("preview")
     } catch (err) {
       setDocumentContent("Error generating document. Please check your OpenAI API key.")
@@ -164,6 +200,9 @@ export default function DocumentsPage() {
                         </div>
                       </div>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => loadVersions(doc.id)} title="View versions">
+                          <History className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon"><Download className="h-4 w-4" /></Button>
                       </div>
@@ -225,6 +264,57 @@ export default function DocumentsPage() {
             type={documentType}
             onDownload={handleDownload}
           />
+        </div>
+      )}
+
+      {showVersions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" /> Version History
+                </CardTitle>
+                <CardDescription>{versions.length} saved versions</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowVersions(false)}>✕</Button>
+            </CardHeader>
+            <CardContent>
+              {versions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="mx-auto h-8 w-8 mb-2" />
+                  <p className="text-sm">No version history yet</p>
+                  <p className="text-xs">Versions are saved automatically when you generate documents</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {versions.map((v) => (
+                    <div key={v.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                          v{v.version}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{v.title || "Untitled"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={restoring}
+                        onClick={() => restoreVersion(v.id)}
+                      >
+                        {restoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

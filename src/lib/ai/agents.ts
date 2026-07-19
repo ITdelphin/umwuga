@@ -235,17 +235,97 @@ Return JSON with: { existing: string[], missing: string[], recommendations: [{ s
 }
 
 export class LanguageAgent {
-  async translate(text: string, targetLanguage: string) {
+  private languageNames: Record<string, string> = {
+    en: "English", rw: "Kinyarwanda", fr: "French", sw: "Kiswahili",
+  }
+
+  async detect(text: string): Promise<string> {
     const response = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        { role: "system", content: `You are a professional translator. Translate the following text to ${targetLanguage}. Maintain the same formatting and professional tone.` },
+        { role: "system", content: "Detect the language of the following text. Return ONLY the language code: en for English, rw for Kinyarwanda, fr for French, sw for Kiswahili. If unsure, return en." },
+        { role: "user", content: text },
+      ],
+      temperature: 0,
+      max_tokens: 5,
+    })
+    const lang = response.choices[0]?.message?.content?.trim().toLowerCase() || "en"
+    return ["en", "rw", "fr", "sw"].includes(lang) ? lang : "en"
+  }
+
+  async translate(text: string, targetLanguage: string) {
+    const langName = this.languageNames[targetLanguage] || targetLanguage
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: `You are a professional translator. Translate the following text to ${langName}. Maintain the same formatting and professional tone.` },
         { role: "user", content: text },
       ],
       temperature: 0.3,
       max_tokens: 2000,
     })
-
     return response.choices[0]?.message?.content || text
+  }
+}
+
+export class CareerAdvisorAgent {
+  async recommend(profile: Record<string, unknown>, targetJob?: string) {
+    const systemPrompt = `You are an AI career advisor. Based on the user's profile, provide personalized career recommendations.
+Return JSON with:
+- career_paths: array of recommended career paths with match percentage
+- skills_to_learn: array of skills to develop for career growth
+- projects_to_build: array of project ideas to strengthen portfolio
+- certifications: array of recommended certifications
+- next_steps: array of actionable next steps`
+
+    const profileText = JSON.stringify(profile, null, 2)
+    const targetText = targetJob ? `\nTarget Job: ${targetJob}` : ""
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Profile:\n${profileText}${targetText}\n\nProvide career recommendations.` },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 1500,
+    })
+    const content = response.choices[0]?.message?.content
+    return content ? JSON.parse(content) : null
+  }
+}
+
+export class StudentAgent {
+  async generateStudentDocument(type: string, profile: Record<string, unknown>, context?: Record<string, unknown>) {
+    const prompts: Record<string, string> = {
+      internship_cv: "Create an entry-level CV for an internship application. Highlight education, projects, and relevant coursework.",
+      scholarship_letter: "Write a compelling scholarship motivation letter. Focus on academic achievements, goals, and why the candidate deserves the scholarship.",
+      university_application: "Write a formal university application letter. Highlight academic background, interests, and reasons for choosing the program.",
+      first_job_cv: "Create a professional entry-level CV for a fresh graduate. Emphasize education, internships, and transferable skills.",
+    }
+
+    const studentContext = context?.isStudent ? `
+This user is a student. Adjust the tone and content accordingly.
+Student information:
+- Currently studying: ${context?.school || "Not specified"}
+- Field of study: ${context?.field || "Not specified"}
+- Expected graduation: ${context?.graduationYear || "Not specified"}
+- Looking for: ${context?.goal || "career opportunities"}` : ""
+
+    const prompt = prompts[type as keyof typeof prompts] || prompts.internship_cv
+    const profileText = JSON.stringify(profile, null, 2)
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: `You are an expert career document writer specializing in student and entry-level documents. ${prompt}${studentContext}
+Format professionally using markdown. Focus on potential, education, and transferable skills.` },
+        { role: "user", content: `Profile:\n${profileText}\n\nGenerate the document.` },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    })
+    return response.choices[0]?.message?.content || ""
   }
 }

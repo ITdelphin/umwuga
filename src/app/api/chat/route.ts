@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
-import { ConversationAgent, DocumentAgent, ProfileAgent, ReviewAgent } from "@/lib/ai/agents"
+import { ConversationAgent, DocumentAgent, ProfileAgent, ReviewAgent, LanguageAgent, CareerAdvisorAgent, StudentAgent } from "@/lib/ai/agents"
 
 const conversationAgent = new ConversationAgent()
 const documentAgent = new DocumentAgent()
 const profileAgent = new ProfileAgent()
 const reviewAgent = new ReviewAgent()
+const languageAgent = new LanguageAgent()
+const careerAdvisor = new CareerAdvisorAgent()
+const studentAgent = new StudentAgent()
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +17,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
     }
 
-    // Determine intent from message
-    const intent = detectIntent(message)
+    const detectedLang = await languageAgent.detect(message)
+    const intent = detectIntent(message, context)
 
     let response: string
 
@@ -40,11 +43,26 @@ export async function POST(request: Request) {
         response = "I'd be happy to improve your CV. Please upload your current CV or paste the content here."
         break
 
+      case "career_advice":
+        response = await handleCareerAdvice(context)
+        break
+
+      case "student_doc":
+        response = await handleStudentDocument(context)
+        break
+
       default:
-        response = await conversationAgent.process(message, context)
+        response = await conversationAgent.process(message, { ...context, language: detectedLang })
     }
 
-    return NextResponse.json({ response })
+    if (detectedLang !== "en") {
+      try {
+        const translated = await languageAgent.translate(response, detectedLang)
+        return NextResponse.json({ response: translated, detectedLanguage: detectedLang })
+      } catch {}
+    }
+
+    return NextResponse.json({ response, detectedLanguage: detectedLang })
   } catch (error) {
     console.error("Chat API error:", error)
     return NextResponse.json(
@@ -54,13 +72,21 @@ export async function POST(request: Request) {
   }
 }
 
-function detectIntent(message: string): string {
+function detectIntent(message: string, context?: any): string {
   const lower = message.toLowerCase()
 
+  if (context?.studentMode) {
+    if (lower.includes("internship") || lower.includes("intern")) return "student_doc"
+    if (lower.includes("scholarship")) return "student_doc"
+    if (lower.includes("university") || lower.includes("college")) return "student_doc"
+  }
+
+  if (lower.includes("career") && (lower.includes("advice") || lower.includes("path") || lower.includes("recommend") || lower.includes("suggest"))) return "career_advice"
+  if (lower.includes("what should i learn") || lower.includes("skill") || lower.includes("grow")) return "career_advice"
+  if (lower.includes("future") || lower.includes("next step") || lower.includes("where to")) return "career_advice"
+
   if (lower.includes("cv") || lower.includes("resume") || lower.includes("curriculum")) {
-    if (lower.includes("improve") || lower.includes("better") || lower.includes("update")) {
-      return "improve_cv"
-    }
+    if (lower.includes("improve") || lower.includes("better") || lower.includes("update")) return "improve_cv"
     return "create_cv"
   }
   if (lower.includes("cover letter")) return "create_cover_letter"
@@ -110,5 +136,43 @@ async function handleJobAnalysis(message: string, context: any) {
     return `📊 Job Analysis Complete\n\n**ATS Compatibility: ${atsResult?.score || 0}/100**\n\n**Keywords:**\n✅ Found: ${atsResult?.keywords?.found?.join(", ") || "None"}\n❌ Missing: ${atsResult?.keywords?.missing?.join(", ") || "None"}\n\n**Skills Gap:**\n✅ You have: ${skillGap?.existing?.join(", ") || "None"}\n📚 Missing: ${skillGap?.missing?.join(", ") || "None"}\n\n**Recommendations:**\n${atsResult?.recommendations?.map((r: string) => `• ${r}`).join("\n") || "None"}\n\nWould you like me to tailor your CV or cover letter for this position?`
   } catch {
     return "I had trouble analyzing the job. Could you provide more details?"
+  }
+}
+
+async function handleCareerAdvice(context: any) {
+  try {
+    const advice = await careerAdvisor.recommend(context?.profile || {}, context?.targetJob)
+    if (!advice) return "Tell me about your background and goals, and I'll provide personalized career recommendations."
+
+    return `🎯 **Career Advisor Recommendations**
+
+**Recommended Career Paths:**
+${(advice.career_paths || []).map((p: any) => `• ${p.title || p} (${p.match || ""} match)`).join("\n")}
+
+**Skills to Learn:**
+${(advice.skills_to_learn || []).map((s: string) => `• ${s}`).join("\n")}
+
+**Projects to Build:**
+${(advice.projects_to_build || []).map((p: string) => `• ${p}`).join("\n")}
+
+**Recommended Certifications:**
+${(advice.certifications || []).map((c: string) => `• ${c}`).join("\n")}
+
+**Next Steps:**
+${(advice.next_steps || []).map((s: string) => `• ${s}`).join("\n")}
+
+Would you like me to elaborate on any of these recommendations?`
+  } catch {
+    return "I had trouble generating career advice. Could you tell me more about your background and goals?"
+  }
+}
+
+async function handleStudentDocument(context: any) {
+  const type = context?.documentType || "internship_cv"
+  try {
+    const doc = await studentAgent.generateStudentDocument(type, context?.profile || {}, context)
+    return `Here's your student document:\n\n${doc}\n\nWould you like me to make any changes or create a different document?`
+  } catch {
+    return "I'm sorry, I had trouble generating the document. Could you provide more details about what you need?"
   }
 }

@@ -96,6 +96,18 @@ CREATE TABLE IF NOT EXISTS documents (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Document Versions
+CREATE TABLE IF NOT EXISTS document_versions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL,
+  content TEXT,
+  title TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_versions_document_id ON document_versions(document_id);
+
 -- Conversations
 CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

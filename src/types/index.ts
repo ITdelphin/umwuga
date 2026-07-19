@@ -163,3 +163,20 @@ export interface SkillGap {
   missing: string[]
   recommendations: { skill: string; resources: string[] }[]
 }
+
+export interface DocumentVersion {
+  id: string
+  document_id: string
+  version: number
+  content: string
+  title: string
+  created_at: string
+}
+
+export interface CareerAdvice {
+  career_paths: { title: string; match: string }[]
+  skills_to_learn: string[]
+  projects_to_build: string[]
+  certifications: string[]
+  next_steps: string[]
+}
