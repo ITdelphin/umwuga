@@ -1,7 +1,12 @@
 -- Umwuga AI Database Schema
+-- Run this entire script in Supabase SQL Editor at:
+-- https://supabase.com/dashboard/project/fznmrahnnmgattzmjpef/sql/new
+
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Profiles
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   full_name TEXT,
@@ -16,12 +21,8 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TRIGGER set_profiles_updated_at
-  BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION moddatetime(updated_at);
-
 -- Experience
-CREATE TABLE experience (
+CREATE TABLE IF NOT EXISTS experience (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   company TEXT NOT NULL,
@@ -35,7 +36,7 @@ CREATE TABLE experience (
 );
 
 -- Education
-CREATE TABLE education (
+CREATE TABLE IF NOT EXISTS education (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   school TEXT NOT NULL,
@@ -48,7 +49,7 @@ CREATE TABLE education (
 );
 
 -- Skills
-CREATE TABLE skills (
+CREATE TABLE IF NOT EXISTS skills (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -58,7 +59,7 @@ CREATE TABLE skills (
 );
 
 -- Projects
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE projects (
 );
 
 -- Certifications
-CREATE TABLE certifications (
+CREATE TABLE IF NOT EXISTS certifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -81,7 +82,7 @@ CREATE TABLE certifications (
 );
 
 -- Documents
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN ('cv', 'resume', 'cover_letter', 'application_letter', 'motivation_letter')),
@@ -96,7 +97,7 @@ CREATE TABLE documents (
 );
 
 -- Conversations
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL DEFAULT 'New Conversation',
@@ -106,7 +107,7 @@ CREATE TABLE conversations (
 );
 
 -- Messages
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
   role TEXT CHECK (role IN ('user', 'assistant', 'system')),
@@ -116,7 +117,7 @@ CREATE TABLE messages (
 );
 
 -- Job Applications
-CREATE TABLE job_applications (
+CREATE TABLE IF NOT EXISTS job_applications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   company TEXT NOT NULL,
@@ -131,7 +132,7 @@ CREATE TABLE job_applications (
 );
 
 -- Interview Sessions
-CREATE TABLE interview_sessions (
+CREATE TABLE IF NOT EXISTS interview_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   job_title TEXT NOT NULL,
@@ -146,7 +147,7 @@ CREATE TABLE interview_sessions (
 );
 
 -- Portfolios
-CREATE TABLE portfolios (
+CREATE TABLE IF NOT EXISTS portfolios (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
   slug TEXT UNIQUE NOT NULL,
@@ -157,7 +158,7 @@ CREATE TABLE portfolios (
 );
 
 -- Document Credits / Payments
-CREATE TABLE credits (
+CREATE TABLE IF NOT EXISTS credits (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   balance INTEGER DEFAULT 0,
@@ -165,7 +166,7 @@ CREATE TABLE credits (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN ('purchase', 'usage', 'bonus')),
@@ -225,24 +226,3 @@ CREATE POLICY "Users can view own portfolio" ON portfolios FOR SELECT USING (aut
 CREATE POLICY "Users can manage own portfolio" ON portfolios FOR ALL USING (auth.uid() IN (SELECT user_id FROM profiles WHERE id = profile_id));
 
 CREATE POLICY "Public profiles viewable" ON portfolios FOR SELECT USING (published = true);
-
--- Functions
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
-AS $$
-BEGIN
-  INSERT INTO profiles (user_id, full_name, email)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', NEW.email);
-
-  INSERT INTO credits (user_id, balance)
-  VALUES (NEW.id, 1); -- 1 free document credit
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
