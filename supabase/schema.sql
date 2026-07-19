@@ -189,6 +189,46 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- AI Prompts
+CREATE TABLE IF NOT EXISTS ai_prompts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  agent TEXT NOT NULL,
+  key TEXT NOT NULL,
+  content TEXT NOT NULL,
+  description TEXT,
+  version INTEGER DEFAULT 1,
+  active BOOLEAN DEFAULT true,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agent, key, version)
+);
+
+ALTER TABLE ai_prompts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins manage prompts" ON ai_prompts FOR ALL USING (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+
+-- Document Templates
+CREATE TABLE IF NOT EXISTS document_templates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('cv', 'resume', 'cover_letter', 'application_letter', 'motivation_letter')),
+  content TEXT NOT NULL,
+  description TEXT,
+  language TEXT DEFAULT 'en',
+  active BOOLEAN DEFAULT true,
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE document_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins manage templates" ON document_templates FOR ALL USING (
+  auth.uid() IN (SELECT user_id FROM profiles WHERE role IN ('admin', 'super_admin'))
+);
+CREATE POLICY "Anyone can read templates" ON document_templates FOR SELECT USING (true);
+
 -- Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE experience ENABLE ROW LEVEL SECURITY;

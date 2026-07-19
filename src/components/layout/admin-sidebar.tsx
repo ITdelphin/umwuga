@@ -13,10 +13,13 @@ import {
   CreditCard,
   ArrowLeft,
   Shield,
+  ShieldAlert,
   Bell,
   History,
+  BarChart3,
   Settings,
   LogOut,
+  Brain,
 } from "lucide-react"
 
 const navItems = [
@@ -28,7 +31,11 @@ const navItems = [
   { href: "/admin/credits", label: "Credits & Payments", icon: CreditCard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/audit-logs", label: "Audit Logs", icon: History },
+  { href: "/admin/security", label: "Security", icon: ShieldAlert },
   { href: "/admin/settings", label: "System Settings", icon: Settings },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+  { href: "/admin/prompts", label: "AI Prompts", icon: Brain },
+  { href: "/admin/templates", label: "Templates", icon: FileText },
 ]
 
 export function AdminSidebar() {
